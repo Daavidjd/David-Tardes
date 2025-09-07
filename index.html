@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <link rel="shortcut icon" href="./LogoCapuchinno.png" type="image/x-icon">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Smash Brawlrot</title>
+  <style>
+    :root{
+      --bg:#111; --fg:#eee; --accent:#c30707; --panel:#222; --panel2:#333; --muted:#999;
+      --p1:#f44336; --p2:#2196f3;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif}
+    #wrap{position:relative;min-height:100%}
+    #game{display:block;margin:12px auto;background:#87ceeb;box-shadow:0 8px 30px rgba(0,0,0,.6);border-radius:8px;max-width:100%;height:auto}
+    .overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,0.8); pointer-events: auto;}
+    #startScreen {
+      background-image: url('./Assets/SmashPortada.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    #startScreen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+    }
+    #startScreen .btn-container {
+      display: flex;
+      gap:20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top:30px;
+    }
+    #characterSelect {
+      background-image: url('./Assets/FondoMenú.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding-top: 60px;
+      z-index: 90;
+    }
+    #characterSelect::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: -1;
+    }
+    #characterSelect h1 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      margin: 0 0 20px;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      text-align: center;
+      z-index: 10;
+    }
+    .btn{padding:10px 20px;font-size:1.1rem;cursor:pointer;border:none;border-radius:10px;background:var(--accent);color:#fff;margin:6px 8px; transition: transform 0.2s, box-shadow 0.2s;}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.4);}
+    .btn:active{transform:translateY(0);}
+    .btn[disabled]{background:#666;cursor:not-allowed}
+    #charGrid{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin-top:16px;padding:0 12px}
+    .charBtn{display:flex;flex-direction:column;align-items:center;justify-content:space-between;width:180px;height:220px;background:var(--panel);border:3px solid #555;border-radius:12px;cursor:pointer;transition:transform .15s,border-color .15s;role:button}
+    .charBtn img{width:140px;height:140px;object-fit:cover;border-radius:8px;margin-bottom:10px;background:#0003}
+    .charBtn span{color:#fff;font-weight:700;text-align:center}
+    .charBtn:hover{transform:translateY(-2px);border-color:var(--accent)}
+    .charBtn.selected{border-color:gold;background:var(--panel2);pointer-events:none;transform:scale(1.03)}
+    .charBtn:disabled{opacity:0.6;cursor:not-allowed}
+    #loadingMsg{margin-top:12px;color:var(--muted);font-size:.9rem}
+    .biomeSelect { display: none; margin-top: 20px; text-align: center; color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
+    .biomeSelect h2 { margin: 0 0 15px; font-size: 1.5rem; }
+    @media (max-width:700px){ .charBtn{width:46vw;max-width:220px} #startScreen h1, #characterSelect h1 { font-size: 2rem; } }
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <!-- Menú principal -->
+  <div id="startScreen" class="overlay" aria-live="polite">
+    <div class="btn-container">
+      <button id="play1P" class="btn" type="button" disabled>1 Jugador (vs CPU)</button>
+      <button id="play2P" class="btn" type="button" disabled>2 Jugadores</button>
+    </div>
+  </div>
+  <!-- Selección de personajes -->
+  <div id="characterSelect" class="overlay" style="display:none;">
+    <h1 id="selectTitle">Selecciona tu personaje (Jugador 1)</h1>
+    <div id="charGrid">
+      <button class="charBtn" data-char="capuchinno" type="button" role="button" tabindex="0" aria-label="Elegir Capuchino Asasino">
+        <img src="./Sprites/LogoCapuchinno.png" alt="Capuchino Asasino" onerror="this.style.opacity=.4">
+        <span>Capuchino Asasino</span>
+      </button>
+      <button class="charBtn" data-char="ballerina" type="button" role="button" tabindex="0" aria-label="Elegir Capuchina Ballerina">
+        <img src="./Sprites/IconoBallerina.png" alt="Capuchina Ballerina" onerror="this.style.opacity=.4">
+        <span>Capuchina Ballerina</span>
+      </button>
+      <button class="charBtn" data-char="bombardinoCrocodino" type="button" role="button" tabindex="0" aria-label="Elegir Bombardino Crocodino">
+        <img src="./Sprites/IconoBorbadino.png" alt="Bombardino Crocodino" onerror="this.style.opacity=.4">
+        <span>Bombardino Crocodino</span>
+      </button>
+      <button class="charBtn" data-char="tralalero" type="button" role="button" tabindex="0" aria-label="Elegir Tralalero">
+        <img src="./Sprites/IconoTralala.png" alt="Tralalero" onerror="this.style.opacity=.4">
+        <span>Tralalero</span>
+      </button>
+      <button class="charBtn" data-char="blueberinni" type="button" role="button" tabindex="0" aria-label="Elegir Blueberinni Octopussini">
+        <img src="./Sprites/IconoBluberrini.png" alt="Blueberinni Octopussini" onerror="this.style.opacity=.4">
+        <span>Blueberinni Octopussini</span>
+      </button>
+      <button class="charBtn" data-char="tungtung" type="button" role="button" tabindex="0" aria-label="Elegir TungTung Sahur">
+        <img src="./Sprites/IconoTungTung.png" alt="TungTung Sahur" onerror="this.style.opacity=.4">
+        <span>TungTung Sahur</span>
+      </button>
+      <button class="charBtn" data-char="capibara" type="button" role="button" tabindex="0" aria-label="Elegir Capibara">
+        <img src="./Sprites/IconoCapibara.png" alt="Capibara" onerror="this.style.opacity=.4">
+        <span>Capibara</span>
+      </button>
+      <!-- NUEVO PERSONAJE: Boneca Ambalabu -->
+      <button class="charBtn" data-char="boneca" type="button" role="button" tabindex="0" aria-label="Elegir Boneca Ambalabu">
+        <img src="./Sprites/IconoBoneca.png" alt="Boneca Ambalabu" onerror="this.style.opacity=.4">
+        <span>Boneca Ambalabu</span>
+      </button>
+    </div>
+    <div id="cpuSelect" class="biomeSelect" style="display:none;">
+      <div id="cpuGrid" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;"></div>
+    </div>
+    <div id="difficultySelect" class="biomeSelect" style="display:none;">
+      <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
+        <button class="btn" data-diff="easy" style="background:#4caf50;">Fácil</button>
+        <button class="btn" data-diff="normal" style="background:#ff9800;">Normal</button>
+        <button class="btn" data-diff="hard" style="background:#f44336;">Difícil</button>
+      </div>
+    </div>
+    <div id="biomeSelect" class="biomeSelect" style="display:none;">
+      <div id="biomeGrid" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center; margin-top:10px;"></div>
+    </div>
+    <div id="loadingMsg" style="display:none;">Cargando...</div>
+  </div>
+  <!-- Pantalla de victoria -->
+  <div id="endScreen" class="overlay" style="display:none;">
+    <h1 id="winnerText"></h1>
+    <button class="btn" type="button">Volver a jugar</button>
+  </div>
+  <!-- Botón de pausa centrado arriba -->
+  <button 
+    id="btnPausa" 
+    class="btn" 
+    style="
+      position: absolute; 
+      top: 20px; 
+      left: 50%; 
+      transform: translateX(-50%); 
+      z-index: 100; 
+      background: #ff9800; 
+      display: none; 
+      pointer-events: auto; 
+      padding: 8px 16px; 
+      font-size: 1.1rem;
+      border: 2px solid white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    "
+    aria-label="Pausar el juego"
+  >
+    ⏸️ Pausa
+  </button>
+  <!-- Menú de pausa -->
+  <div id="pauseMenu" class="overlay" style="display: none; flex-direction: column; justify-content: center; align-items: center; gap: 20px;">
+    <button id="btnResume" class="btn" style="background: #4caf50; width: 200px; font-size: 1.2rem;">▶️ Reanudar</button>
+    <button id="btnToggleMode" class="btn" style="background: #673ab7; width: 200px; font-size: 1.2rem;">🎮 Modo: 1 Jugador</button>
+    <button id="btnMenu" class="btn" style="background: #9c27b0; width: 200px; font-size: 1.2rem;">🏠 Volver al menú</button>
+    <div style="display: flex; flex-direction: column; align-items: center; width: 200px; color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+      <label for="volumeSlider" style="margin-bottom: 8px; font-size: 1.1rem;">🔊 Volumen</label>
+      <input 
+        type="range" 
+        id="volumeSlider" 
+        min="0" 
+        max="100" 
+        value="100" 
+        style="width: 100%; accent-color: #2196f3;"
+      >
+      <span id="volText" style="margin-top: 4px; font-size: 0.9rem;">100%</span>
+    </div>
+  </div>
+  <!-- Canvas del juego -->
+  <canvas id="game" width="1280" height="720"></canvas>
+</div>
+<script>
+/* =========================================================
+   CONFIGURACIÓN
+   ========================================================= */
+const WORLD_WIDTH = 3840;
+const LOGICAL_WIDTH = 1280;
+const LOGICAL_HEIGHT = 720;
+const PERSONAJES = {
+  capuchinno: {
+    caminar: './Sprites/SpriteDeCaminar.png',
+    ataque: './Sprites/SpriteAtaque.png',
+    idle:   './Sprites/SpriteRespira.png',
+    hurt:   './Sprites/DanoCapuchino.png',
+    icono:  './Sprites/LogoCapuchinno.png',
+    cols:   {walk:3, attack:2, idle:3, hurt:3},
+    rows:   {walk:1, attack:1, idle:1, hurt:1}
+  },
+  ballerina: {
+    caminar: './Sprites/BalerinaCamina.png',
+    ataque:  './Sprites/BalerinaAtaca.png',
+    idle:    './Sprites/BalerinaCamina.png',
+    hurt:    './Sprites/DanoBalerina.png',
+    icono:   './Sprites/IconoBallerina.png',
+    cols:    {walk:3, attack:2, idle:3, hurt:3},
+    rows:    {walk:1, attack:1, idle:1, hurt:1},
+    ataqueGiratorio: true,
+    reachCircular: 130
+  },
+  bombardinoCrocodino: {
+    caminar: './Sprites/BombardinoCamina.png',
+    ataque:  './Sprites/BombardinoAtaca.png',
+    idle:    './Sprites/BombardinoCamina.png',
+    hurt:    './Sprites/DanoBombardino.png',
+    icono:   './Sprites/IconoBorbadino.png',
+    cols:    {walk:3, attack:2, idle:3, hurt:3},
+    rows:    {walk:1, attack:1, idle:1, hurt:1},
+    proyectil: {
+      img: './Sprites/DemoBomba.png',
+      explosionSprite: './Sprites/Explosion.png',
+      explosionCols: 3,
+      explosionRows: 1,
+      velocidad: 600,
+      vida: 0.5,
+      daño: 15,
+      radio: 40,
+      explosionRadio: 200
+    }
+  },
+  tralalero: {
+    caminar: './Sprites/Tralalerocamina.png',
+    ataque: './Sprites/TralaleroAtaca.png',
+    idle:   './Sprites/TralaleroRespira.png',
+    hurt:   './Sprites/DanoTralala.png',
+    icono:  './Sprites/IconoTralala.png',
+    cols:   { walk: 3, attack: 2, idle: 3, hurt: 3 },
+    rows:   { walk: 1, attack: 1, idle: 1, hurt: 1 },
+  },
+  blueberinni: {
+    caminar: './Sprites/BluberriniCamina.png',
+    ataque:  './Sprites/BluberriniAtaca.png',
+    idle:    './Sprites/BluberrinirRespira.png',
+    hurt:    './Sprites/DanoBluberrini.png',
+    icono:   './Sprites/IconoBluberrini.png',
+    cols:    { walk: 3, attack: 3, idle: 3, hurt: 3 },
+    rows:    { walk: 1, attack: 1, idle: 1, hurt: 1 },
+    ataqueFrenetico: true
+  },
+  tungtung: {
+    caminar: './Sprites/TungTungCamina.png',
+    ataque:  './Sprites/TungTungAtaca.png',
+    idle:    './Sprites/TungTungRespira.png',
+    hurt:    './Sprites/DanoTungTung.png',
+    icono:   './Sprites/IconoTungTung.png',
+    cols:    { walk: 3, attack: 2, idle: 3, hurt: 3 },
+    rows:    { walk: 1, attack: 1, idle: 1, hurt: 1 },
+  },
+  capibara: {
+    caminar: './Sprites/CapibaraCamina.png',
+    ataque:  './Sprites/CapibaraAtaca.png',
+    idle:    './Sprites/CapibaraRespira.png',
+    hurt:    './Sprites/DanoCapibara.png',
+    icono:   './Sprites/IconoCapibara.png',
+    cols:    { walk: 3, attack: 4, idle: 3, hurt: 3 },
+    rows:    { walk: 1, attack: 1, idle: 1, hurt: 1 },
+    ataqueGiratorio: true,
+    reachCircular: 80
+  },
+  // --- NUEVO PERSONAJE: BONECA AMBALABU ---
+  boneca: {
+    caminar: './Sprites/BonecaCamina.png',
+    ataque:  './Sprites/BonecaAtaca.png',
+    idle:    './Sprites/BonecaRespira.png',
+    hurt:    './Sprites/DanoBoneca.png',
+    icono:   './Sprites/IconoBoneca.png',
+    cols:    { walk: 3, attack: 2, idle: 3, hurt: 2 },
+    rows:    { walk: 1, attack: 1, idle: 1, hurt: 1 }
+  }
+};
+// ✅ BIOMAS con música incluida
+const BIOMES = {
+  forest: {
+    sueloTex: './Assets/SueloSelva.png',
+    fondo: './Assets/FondoSelva.png',
+    panelColor: '#5e3b1f',
+    platformTop: '#7a4b28',
+    musica: './musica/Anime.mp3'
+  },
+  volcano: {
+    sueloTex: './Assets/TexturaRoca.png',
+    fondo: './Assets/FondoVolcan.png',
+    panelColor: '#8b0000',
+    platformTop: '#c11212',
+    musica: './musica/piratas2.mp3'
+  },
+  snow: {
+    sueloTex: './Assets/TexturaHielo.png',
+    fondo: './Assets/FondoNieve.png',
+    panelColor: '#333366',
+    platformTop: '#b2ebf2',
+    musica: './musica/piratas.mp3'
+  },
+  playa: {
+    sueloTex: './Assets/SueloSelva.png',
+    fondo: './Assets/FondoPlaya.png',
+    panelColor: '#f4c27d',
+    platformTop: '#e0a85e',
+    musica: './musica/Veranito.mp3'
+  },
+  cementerio: {
+    sueloTex: './Assets/TexturaHueso.png',
+    fondo: './Assets/FondoCementerio.png',
+    panelColor: '#1e1e30',
+    platformTop: '#4a4a6a',
+    musica: './musica/Carnival.mp3'
+  },
+  plaza: {
+    sueloTex: './Assets/TexturaRoca.png',
+    fondo: './Assets/FondoPlaza.png',
+    panelColor: '#555555',
+    platformTop: '#a0a0a0',
+    musica: './musica/Framenquito.mp3'
+  }
+};
+const BLOQUE = 64;
+const GRAVEDAD = 1400;
+const WALK_SPEED = 420;
+const AIR_ACCEL = 2200;
+const GROUND_ACCEL = 2600;
+const FPS_WALK   = 6;
+const FPS_ATTACK = 12;
+const FPS_IDLE   = 4;
+const FPS_HURT   = 10;
+const ATTACK = {
+  windup: 0.08,
+  active: 0.12,
+  recover:0.20,
+  reach: 120,
+  vKnock:-320,
+  baseKB: 520,
+  kbPerDamage: 5,
+  hurtStun: 0.28,
+  iFrames: 0.2
+};
+
+/* =========================================================
+   SISTEMA DE AUDIO MEJORADO
+   ========================================================= */
+const sfxFiles = {
+  jump: './sfx/jump.mp3',
+  hit: './Sfx/punch-6-166699.mp3',
+  ko: './sfx/explosion-312361.mp3',
+  projectile: './sfx/gunshot-372470.mp3',
+  explosion: './sfx/explosion-312361.mp3',
+  click: './sfx/game-start-317318.mp3' 
+};
+let sfx = {};
+let audioEnabled = false;
+let musicaMenu = null;
+let musicaCombate = null;
+let musicaReproduciendose = false;
+const pistasMusica = {}; // Música por bioma
+
+// 🔊 Cargar todos los sonidos y música
+async function preloadAudio() {
+  const promises = Object.entries(sfxFiles).map(async ([name, src]) => {
+    try {
+      const audio = new Audio();
+      audio.src = src;
+      audio.preload = 'auto';
+      await audio.play().then(() => audio.pause()).catch(() => {});
+      sfx[name] = audio;
+    } catch (err) {
+      console.warn(`❌ No se pudo cargar el sonido: ${src}`);
+      sfx[name] = null;
+    }
+  });
+  await Promise.all(promises);
+  console.log("🔊 Sonidos cargados:", Object.keys(sfx));
+}
+
+// 🔊 Cargar todas las pistas de música
+async function cargarTodasLasMusics() {
+  try {
+    // Música del menú
+    musicaMenu = new Audio('./musica/Swing.mp3');
+    musicaMenu.loop = true;
+    musicaMenu.volume = 0.4;
+    await musicaMenu.play().then(() => musicaMenu.pause()).catch(() => {});
+    musicaMenu.pause();
+    musicaMenu.currentTime = 0;
+    console.log("🎵 Música del menú cargada");
+
+    // Música de cada bioma
+    for (const [bioma, datos] of Object.entries(BIOMES)) {
+      if (datos.musica) {
+        const audio = new Audio();
+        audio.src = datos.musica;
+        audio.loop = true;
+        audio.volume = 0.4;
+        await audio.play().then(() => audio.pause()).catch(() => {});
+        audio.pause();
+        audio.currentTime = 0;
+        pistasMusica[bioma] = audio;
+      }
+    }
+    console.log("🎵 Músicas de escenarios cargadas");
+  } catch (err) {
+    console.warn("❌ Error al cargar las músicas:", err);
+  }
+}
+
+function playSFX(name) {
+  if (!audioEnabled) return;
+  const audio = sfx[name];
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch(() => {
+      console.log("🔇 Audio bloqueado. Esperando interacción.");
+    });
+  }
+}
+
+// 🔊 Desbloquear audio
+function unlockAudio() {
+  audioEnabled = true;
+  Object.values(sfx).forEach(audio => {
+    if (audio instanceof Audio) {
+      audio.play().then(() => audio.pause()).catch(() => {});
+    }
+  });
+  if (musicaMenu && !musicaReproduciendose) {
+    musicaMenu.play().catch(err => console.warn("🔇 No se pudo reproducir música del menú:", err));
+    musicaReproduciendose = true;
+  }
+  console.log("✅ Audio desbloqueado");
+}
+document.addEventListener('click', unlockAudio, { once: false });
+
+/* =========================================================
+   Variables globales
+   ========================================================= */
+let juegoIniciado = false;
+let juegoPausado = false;
+let cuentaAtras = 3;
+let tiempoCuentaAtras = 1;
+let shakeT = 0, shakeAmp = 0;
+let windBurst = null;
+let texSuelo, fondoEscenario;
+let modoCPU = false;
+let dificultadCPU = 'normal';
+let biomaActual = 'forest';
+const teclas = {};
+const proyectiles = [];
+const explosiones = [];
+let camX = 0;
+
+addEventListener('keydown', e => {
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," ","p","P"].includes(e.key)) e.preventDefault();
+  teclas[e.key] = true;
+});
+
+addEventListener('keyup', e => {
+  teclas[e.key] = false;
+});
+
+/* =========================================================
+   Canvas + Escala Lógica
+   ========================================================= */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d', { alpha: false });
+ctx.imageSmoothingEnabled = false;
+
+function fitCanvasToCSS(){
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const cssW = Math.min(canvas.parentElement.clientWidth - 24, LOGICAL_WIDTH);
+  const cssH = Math.round(cssW * 9/16);
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const scaleX = cssW / LOGICAL_WIDTH;
+  const scaleY = cssH / LOGICAL_HEIGHT;
+  ctx.setTransform(dpr * scaleX, 0, 0, dpr * scaleY, 0, 0);
+}
+
+fitCanvasToCSS();
+window.addEventListener('resize', fitCanvasToCSS);
+
+/* =========================================================
+   Precarga robusta
+   ========================================================= */
+function makePlaceholder(w=128, h=128, color='#9e9e9e'){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  x.fillStyle = color; x.fillRect(0,0,w,h);
+  x.fillStyle = '#0006'; x.fillRect(0,0,w,22);
+  x.fillStyle = '#fff'; x.font='bold 12px sans-serif'; x.fillText('placeholder', 4, 15);
+  const img = new Image(); img.src = c.toDataURL(); return img;
+}
+
+function loadImage(src, fallbackColor = '#9e9e9e') {
+  return new Promise(resolve => {
+    const img = new Image();
+    if (!src || src.trim() === '') {
+      console.warn("❌ Ruta vacía, usando placeholder");
+      resolve(makePlaceholder(256, 256, fallbackColor));
+      return;
+    }
+    console.log("🔄 Cargando imagen:", src);
+    img.onload = () => {
+      console.log("✅ Cargada:", src);
+      resolve(img);
+    };
+    img.onerror = () => {
+      console.error(`❌ Error al cargar: ${src}`);
+      if (window.location.protocol === 'file:') {
+        console.warn("⚠️  Usando file://. Usa un servidor local.");
+      }
+      resolve(makePlaceholder(256, 256, fallbackColor));
+    };
+    img.src = src;
+  });
+}
+
+/* =========================================================
+   GENERACIÓN DE TERRENO
+   ========================================================= */
+let terreno = [];
+let plataformas = [];
+function generarTerreno() {
+  terreno.length = 0;
+  plataformas.length = 0;
+  const blockSize = BLOQUE;
+  const blocks = Math.ceil(WORLD_WIDTH / blockSize);
+  const groundBaseY = LOGICAL_HEIGHT - 120;
+  for (let i = 0; i < blocks; i++) {
+    terreno.push({
+      x: i * blockSize,
+      y: groundBaseY,
+      w: blockSize,
+      h: 50,
+      textura: texSuelo
+    });
+  }
+  const numHoles = 2 + Math.floor(Math.random() * 3);
+  for (let h = 0; h < numHoles; h++) {
+    const holeSize = 2 + Math.floor(Math.random() * 3);
+    const holeStart = 4 + Math.floor(Math.random() * (blocks - holeSize - 8));
+    for (let i = 0; i < holeSize; i++) {
+      terreno[holeStart + i] = null;
+    }
+  }
+  const esDosPisos = Math.random() < 0.4;
+  const groundY = groundBaseY - 120;
+  const midY = groundBaseY - 240;
+  const topY = groundBaseY - 360;
+  if (esDosPisos) {
+    for (let levelY of [groundY, midY, topY]) {
+      if (Math.random() < 0.7) {
+        const w = (2 + Math.random() * 2) * BLOQUE;
+        const x = BLOQUE * 4 + Math.random() * (WORLD_WIDTH - BLOQUE * 8);
+        plataformas.push({ x, y: levelY, w, h: 18, oneWay: true, moving: false });
+      }
+    }
+  } else {
+    const maxPlats = 8;
+    let intentos = 0;
+    const maxIntentos = 50;
+    while (plataformas.length < maxPlats && intentos < maxIntentos) {
+      intentos++;
+      const w = (2 + Math.random()) * BLOQUE;
+      const x = BLOQUE * 4 + Math.random() * (WORLD_WIDTH - BLOQUE * 8);
+      const y = groundBaseY - 100 - Math.random() * 300;
+      if (y < 150) continue;
+      const nuevaPlat = { x, y, w, h: 18 };
+      const colisiona = plataformas.some(plat => {
+        return nuevaPlat.x + nuevaPlat.w > plat.x &&
+               nuevaPlat.x < plat.x + plat.w &&
+               nuevaPlat.y + nuevaPlat.h > plat.y &&
+               nuevaPlat.y < plat.y + plat.h;
+      });
+      if (!colisiona) {
+        plataformas.push({
+          x, y, w, h: 18,
+          oneWay: true,
+          moving: false
+        });
+      }
+    }
+  }
+  if (Math.random() < 0.3) {
+    const numHorizontales = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < numHorizontales; i++) {
+      const w = 3 * BLOQUE + Math.random() * 2 * BLOQUE;
+      const y = LOGICAL_HEIGHT * 0.3 + Math.random() * 100;
+      const speed = 80 + Math.random() * 40;
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      const margin = BLOQUE * 3;
+      const leftBound = margin;
+      const rightBound = WORLD_WIDTH - w - margin;
+      if (rightBound > leftBound) {
+        const x = leftBound + Math.random() * (rightBound - leftBound);
+        plataformas.push({
+          x, y, w, h: 18, oneWay: true, moving: true, movingType: 'horizontal',
+          vx: speed, dir, bounds: { left: leftBound, right: rightBound }
+        });
+      }
+    }
+  }
+  if (Math.random() < 0.2) {
+    const numVerticales = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < numVerticales; i++) {
+      const w = 2 * BLOQUE + Math.random() * 2 * BLOQUE;
+      const x = WORLD_WIDTH / 2 - 50 + Math.random() * 100;
+      const topY = 120, bottomY = LOGICAL_HEIGHT - 100;
+      const y = topY + Math.random() * (bottomY - topY);
+      const speed = 60 + Math.random() * 40;
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      plataformas.push({
+        x, y, w, h: 18, oneWay: true, moving: true, movingType: 'vertical',
+        vy: speed, dir, bounds: { top: topY, bottom: bottomY }
+      });
+    }
+  }
+}
+
+/* =========================================================
+   COLISIONES
+   ========================================================= */
+function detectarColisionesSuelo(j, dt) {
+  j.enSuelo = false;
+  const candidatos = [...terreno.filter(Boolean), ...plataformas];
+  const halfW = j.hitW * 0.5;
+  const footY = j.y + j.hitH * 0.4;
+  for (const b of candidatos) {
+    if (j.x + halfW < b.x || j.x - halfW > b.x + b.w) continue;
+    if (j.vy >= 0 && footY >= b.y && j.y - j.hitH * 0.6 <= b.y) {
+      j.y = b.y - j.hitH * 0.4;
+      j.vy = 0;
+      j.enSuelo = true;
+      j.saltosDisponibles = 2;
+      if (b.moving && b.movingType === 'horizontal') {
+        j.x += b.vx * b.dir * dt;
+      }
+      return;
+    }
+  }
+}
+
+/* =========================================================
+   IA MEJORADA
+   ========================================================= */
+function actualizarIA(bot, objetivo, dt) {
+  if (!bot.esCPU || !juegoIniciado || juegoPausado) return;
+  if (!bot.ai) {
+    bot.ai = { left: false, right: false, jump: false, attack: false, think: 0, attackCd: 0, jumpCd: 0 };
+  }
+  bot.ai.think -= dt;
+  bot.ai.attackCd -= dt;
+  bot.ai.jumpCd -= dt;
+  if (bot.ai.think <= 0) {
+    let thinkTime = 0.15;
+    let precision = 1.0;
+    if (bot.iaDificultad === 'easy') {
+      thinkTime += 0.15;
+      precision = 0.6;
+    } else if (bot.iaDificultad === 'hard') {
+      thinkTime -= 0.08;
+      precision = 1.3;
+    }
+    bot.ai.think = thinkTime + Math.random() * 0.05;
+    const dx = objetivo.x - bot.x;
+    const distX = Math.abs(dx);
+    const enRangoCuerpo = distX < ATTACK.reach * precision;
+    const enRangoProyectil = bot.assets.cfg.proyectil && distX < 400 && distX > 100;
+    bot.ai.left = bot.ai.right = bot.ai.jump = bot.ai.attack = false;
+    if (distX > 20) {
+      if (Math.random() > (bot.iaDificultad === 'easy' ? 0.2 : 0)) {
+        bot.ai.left = dx < 0;
+        bot.ai.right = dx > 0;
+      }
+      bot.mirando = dx < 0 ? -1 : 1;
+    }
+    if (bot.enSuelo && objetivo.y < bot.y - 60 && bot.ai.jumpCd <= 0) {
+      if (bot.iaDificultad !== 'easy' || Math.random() < 0.6) {
+        bot.ai.jump = true;
+        bot.ai.jumpCd = bot.iaDificultad === 'easy' ? 1.2 : 0.8;
+      }
+    }
+    if (enRangoProyectil && bot.attackTimer <= 0 && bot.stun <= 0 && bot.ai.attackCd <= 0) {
+      const puedeLanzar = bot.iaDificultad === 'easy' ? Math.random() < 0.5 :
+                          bot.iaDificultad === 'normal' ? Math.random() < 0.7 : true;
+      if (puedeLanzar) {
+        bot.ai.attack = true;
+        bot.ai.attackCd = 0.8;
+      }
+    }
+    else if (enRangoCuerpo && bot.attackTimer <= 0 && bot.stun <= 0 && bot.ai.attackCd <= 0) {
+      const puedeAtacar = bot.iaDificultad === 'easy' ? Math.random() < 0.7 : true;
+      if (puedeAtacar) {
+        bot.ai.attack = true;
+        bot.ai.attackCd = 0.5;
+      }
+    }
+  }
+}
+
+/* =========================================================
+   Precarga de personajes
+   ========================================================= */
+async function preloadPersonaje(cfg){
+  const [walk, atk, idle, hurt, icon, proyectilImg, explosionImg] = await Promise.all([
+    loadImage(cfg.caminar, '#ad7'),
+    loadImage(cfg.ataque,  '#da7'),
+    loadImage(cfg.idle,    '#7ad'),
+    loadImage(cfg.hurt,    '#d77'),
+    loadImage(cfg.icono,   '#999'),
+    cfg.proyectil?.img ? loadImage(cfg.proyectil.img, '#ff5722') : Promise.resolve(null),
+    cfg.proyectil?.explosionSprite ? loadImage(cfg.proyectil.explosionSprite, '#ff9800') : Promise.resolve(null)
+  ]);
+  const frame = {
+    walk:   { w: Math.floor(walk.width / cfg.cols.walk),   h: Math.floor(walk.height / cfg.rows.walk) },
+    attack: { w: Math.floor(atk.width / cfg.cols.attack), h: Math.floor(atk.height / cfg.rows.attack) },
+    idle:   { w: Math.floor(idle.width / cfg.cols.idle),   h: Math.floor(idle.height / cfg.rows.idle) },
+    hurt:   { w: Math.floor(hurt.width / cfg.cols.hurt),   h: Math.floor(hurt.height / cfg.rows.hurt) }
+  };
+  return { walk, atk, idle, hurt, icon, cfg, frame, proyectilImg, explosionImg };
+}
+
+/* =========================================================
+   Jugador
+   ========================================================= */
+let jugadores = [];
+function crearJugador(x, controles, colorHUD, assets, esCPU = false, charKey = 'capuchinno') {
+  const escalaVisual = 0.34;
+  let hitW, hitH, renderW, renderH;
+  if (assets.frame.idle) {
+    const baseFrameW = assets.frame.idle.w;
+    const baseFrameH = assets.frame.idle.h;
+    renderW = Math.round(baseFrameW * escalaVisual);
+    renderH = Math.round(baseFrameH * escalaVisual);
+    switch (charKey) {
+      case 'bombardinoCrocodino':
+        hitW = 135;
+        hitH = 100;
+        break;
+      case 'ballerina':
+        hitW = 56;
+        hitH = 96;
+        break;
+      case 'tralalero':
+        hitW = 90;
+        hitH = 70;
+        break;
+      case 'tungtung':
+        hitW = 70;
+        hitH = 100;
+        break;
+      case 'blueberinni':
+        hitW = 75;
+        hitH = 100;
+        break;
+      case 'capibara':
+        hitW = 50;
+        hitH = 100;
+        break;
+      case 'boneca':
+        hitW = 60;
+        hitH = 110;
+        break;
+      default:
+        hitW = 60;
+        hitH = 100;
+    }
+  } else {
+    hitW = 60;
+    hitH = 100;
+    renderW = 80;
+    renderH = 100;
+  }
+  const player = {
+    x, y: 0, vx: 0, vy: 0, hitW, hitH, renderW, renderH,
+    enSuelo: false, daño: 0, mirando: 1, vidas: 5, colorHUD, icono: assets.icon,
+    saltosDisponibles: 2, _saltarPrev: false, frameIndex: 0, animTimer: 0,
+    controles, attackTimer: 0, stun: 0, iFrames: 0, assets, esCPU, ai: null,
+    _yaGolpeados: null, walkSpeed: WALK_SPEED, baseKB: ATTACK.baseKB, extraDamage: 0,
+    proyectilImg: assets.proyectilImg,
+    explosionImg: assets.explosionImg,
+    explosionCols: assets.cfg.proyectil?.explosionCols || 1,
+    explosionRows: assets.cfg.proyectil?.explosionRows || 1,
+    frenzyActive: false,
+    frenzyTimer: 0,
+    frenzyMax: 8,
+    usedFrenzy: false,
+    updateStats(stats) {
+      this.walkSpeed = stats.walkSpeed || WALK_SPEED;
+      this.baseKB = stats.baseKB || ATTACK.baseKB;
+      this.extraDamage = stats.damage ? stats.damage - 10 : 0;
+      return this;
+    },
+    reset() {
+      this.daño = 0;
+      this.vx = 0;
+      this.vy = 0;
+      const centroCamara = camX + LOGICAL_WIDTH / 2;
+      this.x = Math.max(BLOQUE, Math.min(centroCamara, WORLD_WIDTH - BLOQUE));
+      this.y = 0;
+      this.saltosDisponibles = 2;
+      this.stun = 0;
+      this.iFrames = 0;
+      this.attackTimer = 0;
+      this.frameIndex = 0;
+      this.animTimer = 0;
+      this.frenzyActive = false;
+      this.frenzyTimer = 0;
+      this.usedFrenzy = false;
+      delete this._ultimoGolpe;
+    },
+    update(dt) {
+      if (!juegoIniciado || juegoPausado) return;
+      if (this.stun > 0) this.stun -= dt;
+      if (this.iFrames > 0) this.iFrames -= dt;
+      if (this.attackTimer > 0) this.attackTimer -= dt;
+      if (this.frenzyTimer > 0) {
+        this.frenzyTimer -= dt;
+        if (this.frenzyTimer <= 0) {
+          this.frenzyActive = false;
+        }
+      }
+      const izq = this.esCPU ? !!this.ai.left : !!teclas[this.controles.izq];
+      const der = this.esCPU ? !!this.ai.right : !!teclas[this.controles.der];
+      const salto = this.esCPU ? !!this.ai.jump : !!teclas[this.controles.salto];
+      const ataque = this.esCPU ? !!this.ai.attack : !!teclas[this.controles.ataque];
+      const saltoJusto = salto && !this._saltarPrev;
+      this._saltarPrev = salto;
+      const accel = this.enSuelo ? GROUND_ACCEL : AIR_ACCEL;
+      let objetivoVx = 0;
+      if (izq) objetivoVx -= this.walkSpeed;
+      if (der) objetivoVx += this.walkSpeed;
+      if (objetivoVx !== 0) this.mirando = Math.sign(objetivoVx);
+      const deltaVx = Math.max(-accel * dt, Math.min(accel * dt, objetivoVx - this.vx));
+      if (this.stun <= 0) this.vx += deltaVx;
+      if (this.enSuelo && !izq && !der) this.vx *= 0.9;
+      if (this.stun <= 0 && saltoJusto && this.saltosDisponibles > 0) {
+        this.vy = -720;
+        this.enSuelo = false;
+        this.saltosDisponibles--;
+        playSFX('jump');
+      }
+      this.vy += GRAVEDAD * dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      detectarColisionesSuelo(this, dt);
+      if (this.stun <= 0) {
+        if (ataque) {
+          if (!this.usedFrenzy && !this.frenzyActive && this.assets.cfg.ataqueFrenetico) {
+            this.frenzyActive = true;
+            this.frenzyTimer = this.frenzyMax;
+            this.usedFrenzy = true;
+          }
+          if (this.assets.cfg.proyectil && this.attackTimer <= 0) {
+            const velocidad = this.assets.cfg.proyectil.velocidad || 600;
+            const proyectil = {
+              x: this.x + this.mirando * 40,
+              y: this.y - 20,
+              vx: this.mirando * velocidad,
+              radio: this.assets.cfg.proyectil.radio || 30,
+              vida: this.assets.cfg.proyectil.vida || 0.5,
+              owner: this,
+              img: this.proyectilImg,
+              explosionRadio: this.assets.cfg.proyectil.explosionRadio || 200
+            };
+            proyectiles.push(proyectil);
+            this.attackTimer = ATTACK.windup + ATTACK.active + ATTACK.recover;
+            this.frameIndex = 0;
+            this.animTimer = 0;
+            this._yaGolpeados = new WeakSet();
+            playSFX('projectile');
+            return;
+          }
+          if (this.attackTimer <= 0) {
+            this.attackTimer = ATTACK.windup + ATTACK.active + ATTACK.recover;
+            this.frameIndex = 0;
+            this.animTimer = 0;
+            this._yaGolpeados = new WeakSet();
+            playSFX('hit');
+          }
+          else if (this.attackTimer <= ATTACK.recover && this.frenzyActive) {
+            this.attackTimer = ATTACK.windup + ATTACK.active + ATTACK.recover;
+            this.frameIndex = 0;
+            this.animTimer = 0;
+            this._yaGolpeados = new WeakSet();
+            playSFX('hit');
+          }
+        }
+      }
+      const t = (ATTACK.windup + ATTACK.active + ATTACK.recover) - this.attackTimer;
+      const activo = t >= ATTACK.windup && t < (ATTACK.windup + ATTACK.active);
+      if (activo && this._yaGolpeados) {
+        for (const obj of jugadores) {
+          if (obj === this || this._yaGolpeados.has(obj)) continue;
+          let puedeGolpear = false;
+          let knockbackDir = this.mirando;
+          if (this.assets.cfg.ataqueFrenetico && this.frenzyActive) {
+            const distX = obj.x - this.x;
+            const distY = Math.abs(obj.y - this.y);
+            if (Math.sign(distX) === this.mirando && Math.abs(distX) < ATTACK.reach && distY < this.renderH) {
+              puedeGolpear = true;
+              knockbackDir = this.mirando;
+            }
+          } else if (this.assets.cfg.ataqueGiratorio) {
+            const reach = this.assets.cfg.reachCircular || 120;
+            const dx = obj.x - this.x;
+            const dy = obj.y - this.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const distY = Math.abs(dy);
+            if (dist < reach && distY < this.renderH * 1.2) {
+              puedeGolpear = true;
+              knockbackDir = Math.sign(dx) || this.mirando;
+            }
+          } else {
+            const distX = obj.x - this.x;
+            const distY = Math.abs(obj.y - this.y);
+            if (Math.sign(distX) === this.mirando && Math.abs(distX) < ATTACK.reach && distY < this.renderH) {
+              puedeGolpear = true;
+            }
+          }
+          if (puedeGolpear && obj.iFrames <= 0) {
+            const baseDamage = this.frenzyActive ? 6 : 10;
+            const damage = baseDamage + (this.extraDamage || 0);
+            obj.daño += damage;
+            if (!this.frenzyActive) {
+              const knock = this.baseKB + obj.daño * ATTACK.kbPerDamage;
+              obj.vx = knockbackDir * knock * 0.9;
+              obj.vy = ATTACK.vKnock;
+              obj.stun = ATTACK.hurtStun;
+              obj.iFrames = ATTACK.iFrames;
+            } else {
+              obj.stun = 0.08;
+              obj.iFrames = 0.1;
+            }
+            obj.frameIndex = 0;
+            obj.animTimer = 0;
+            shakeT = 0.12;
+            shakeAmp = Math.min(16, 6 + obj.daño * 0.04);
+            this._yaGolpeados.add(obj);
+            playSFX('hit');
+          }
+        }
+      }
+      const halfW = this.renderW / 2;
+      const fueraIzquierda = this.x + halfW < 0;
+      const fueraDerecha   = this.x - halfW > WORLD_WIDTH;
+      const fueraAbajo     = this.y - this.renderH > LOGICAL_HEIGHT;
+      if (!this.enSuelo && (fueraIzquierda || fueraDerecha || fueraAbajo)) {
+        windBurst = { dir: fueraIzquierda ? -1 : fueraDerecha ? 1 : (Math.random() > 0.5 ? 1 : -1), life: 0.4, maxLife: 0.4 };
+        shakeT = 0.15; shakeAmp = 12;
+        playSFX('ko');
+        this.reset();
+        this.vidas--;
+        if (this.vidas <= 0) {
+          const ganador = jugadores.find(j => j !== this);
+          if (ganador) finalizarJuego(ganador);
+        }
+      }
+      this.animTimer += dt;
+      let animSpeed;
+      if (this.stun > 0) {
+        animSpeed = FPS_HURT;
+      }
+      else if (this.assets.cfg.ataqueFrenetico && this.frenzyActive && ataque && this.attackTimer > 0) {
+        animSpeed = FPS_ATTACK;
+      }
+      else if (this.attackTimer > ATTACK.recover) {
+        animSpeed = FPS_ATTACK;
+      }
+      else if (Math.abs(this.vx) > 40) {
+        animSpeed = FPS_WALK;
+      }
+      else {
+        animSpeed = FPS_IDLE;
+      }
+      const iv = 1 / animSpeed;
+      if (this.animTimer >= iv) {
+        this.animTimer -= iv;
+        const anim = this.stun > 0 ? 'hurt' :
+                     (this.assets.cfg.ataqueFrenetico && this.frenzyActive && ataque) ? 'attack' :
+                     this.attackTimer > ATTACK.recover ? 'attack' :
+                     Math.abs(this.vx) > 40 ? 'walk' : 'idle';
+        this.frameIndex = (this.frameIndex + 1) % this.assets.cfg.cols[anim];
+      }
+    },
+    draw(ctx) {
+      ctx.save();
+      if (shakeT > 0) ctx.translate((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp);
+      ctx.translate(this.x, this.y);
+      if (this.mirando === -1) ctx.scale(-1, 1);
+      const offsetY = this.renderH * 0.35;
+      let sprite, sx, frameW, frameH;
+      const ataquePresionado = teclas[this.controles.ataque];
+      if (this.stun > 0) {
+        sprite = this.assets.hurt; frameW = this.assets.frame.hurt.w; frameH = this.assets.frame.hurt.h;
+        sx = this.frameIndex * frameW;
+      }
+      else if (this.assets.cfg.ataqueFrenetico && this.frenzyActive && ataquePresionado && this.attackTimer > 0) {
+        sprite = this.assets.atk; frameW = this.assets.frame.attack.w; frameH = this.assets.frame.attack.h;
+        sx = this.frameIndex * frameW;
+      }
+      else if (this.attackTimer > ATTACK.recover) {
+        sprite = this.assets.atk; frameW = this.assets.frame.attack.w; frameH = this.assets.frame.attack.h;
+        sx = this.frameIndex * frameW;
+      }
+      else if (Math.abs(this.vx) > 40) {
+        sprite = this.assets.walk; frameW = this.assets.frame.walk.w; frameH = this.assets.frame.walk.h;
+        sx = this.frameIndex * frameW;
+      }
+      else {
+        sprite = this.assets.idle; frameW = this.assets.frame.idle.w; frameH = this.assets.frame.idle.h;
+        sx = this.frameIndex * frameW;
+      }
+      ctx.drawImage(sprite, sx, 0, frameW, frameH, -this.renderW / 2, -this.renderH + offsetY, this.renderW, this.renderH);
+      ctx.restore();
+    }
+  };
+  return player;
+}
+
+/* =========================================================
+   Fin del juego
+   =========================================================*/
+function finalizarJuego(ganador) {
+  juegoIniciado = false;
+  const endScreen = document.getElementById('endScreen');
+  const winnerText = document.getElementById('winnerText');
+  winnerText.innerHTML = `¡Jugador ${jugadores.indexOf(ganador)+1} gana!<br><img src="${ganador.icono.src}" width="120" alt="icono ganador">`;
+  endScreen.style.display = 'flex';
+}
+
+/* =========================================================
+   Dibujo del escenario
+   ========================================================= */
+function drawStage() {
+  if (fondoEscenario) {
+    const repeatX = Math.ceil(WORLD_WIDTH / fondoEscenario.width);
+    for (let i = 0; i < repeatX; i++) {
+      ctx.drawImage(fondoEscenario, i * fondoEscenario.width, 0, fondoEscenario.width, LOGICAL_HEIGHT);
+    }
+  } else {
+    ctx.fillStyle = '#87ceeb';
+    ctx.fillRect(0, 0, WORLD_WIDTH, LOGICAL_HEIGHT);
+  }
+  for (const b of terreno) {
+    if (!b) continue;
+    if (b.textura) {
+      ctx.drawImage(b.textura, b.x, b.y, b.w, b.h);
+    } else {
+      ctx.fillStyle = '#5e3b1f';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+    }
+  }
+  const bioma = BIOMES[biomaActual];
+  ctx.fillStyle = bioma.panelColor;
+  plataformas.forEach(p => {
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    if (p.moving) {
+      ctx.fillStyle = p.movingType === 'horizontal' ? '#ff9800' : '#2196f3';
+      ctx.fillRect(p.x, p.y, p.w, 4);
+      ctx.fillStyle = bioma.panelColor;
+    } else {
+      ctx.fillStyle = bioma.platformTop;
+      ctx.fillRect(p.x, p.y, p.w, 4);
+      ctx.fillStyle = bioma.panelColor;
+    }
+  });
+}
+
+/* =========================================================
+   🌪️ Dibujar ráfaga de viento
+   ========================================================= */
+function drawWindBurst() {
+  if (!windBurst) return;
+  const { dir, life, maxLife } = windBurst;
+  const alpha = life / maxLife;
+  const x = LOGICAL_WIDTH / 2;
+  const y = LOGICAL_HEIGHT / 2;
+  ctx.save();
+  ctx.globalAlpha = alpha * 0.9;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 6;
+  ctx.shadowColor = '#ffffff';
+  ctx.shadowBlur = 20;
+  for (let i = 0; i < 12; i++) {
+    const offset = (i - 5.5) * 12;
+    const x1 = x + offset * dir;
+    const y1 = y + offset * 0.2;
+    const x2 = x1 + 100 * dir * alpha * (0.7 + Math.random() * 0.6);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y1 + Math.random() * 4);
+    ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+/* =========================================================
+   Bucle principal
+   ========================================================= */
+let lastTs = 0;
+const fixedDt = 1/60;
+let accumulator = 0;
+function loop(ts) {
+  if (juegoPausado) {
+    requestAnimationFrame(loop);
+    return;
+  }
+  if (!lastTs) lastTs = ts;
+  let frameTime = (ts - lastTs) / 1000;
+  lastTs = ts;
+  if (frameTime > 0.1) frameTime = 0.1;
+  accumulator += frameTime;
+  for (const p of plataformas) {
+    if (!p.moving) continue;
+    if (p.movingType === 'horizontal') {
+      p.x += p.vx * p.dir * frameTime;
+      if (p.x <= p.bounds.left) { p.x = p.bounds.left; p.dir = 1; }
+      else if (p.x + p.w >= p.bounds.right) { p.x = p.bounds.right - p.w; p.dir = -1; }
+    }
+    if (p.movingType === 'vertical') {
+      p.y += p.vy * p.dir * frameTime;
+      if (p.y <= p.bounds.top) { p.y = p.bounds.top; p.dir = 1; }
+      else if (p.y >= p.bounds.bottom) { p.y = p.bounds.bottom; p.dir = -1; }
+    }
+  }
+  if (windBurst) {
+    windBurst.life -= frameTime;
+    if (windBurst.life <= 0) windBurst = null;
+  }
+  if (!juegoIniciado) {
+    tiempoCuentaAtras -= frameTime;
+    if (tiempoCuentaAtras <= 0) {
+      if (cuentaAtras > 0) {
+        cuentaAtras--;
+        tiempoCuentaAtras = 1;
+      } else if (cuentaAtras === 0) {
+        cuentaAtras = -1;
+        tiempoCuentaAtras = 0.8;
+      } else if (cuentaAtras === -1) {
+        juegoIniciado = true;
+        shakeT = 0;
+        shakeAmp = 0;
+      }
+    }
+  }
+  while (accumulator >= fixedDt) {
+    if (modoCPU && jugadores[1]) actualizarIA(jugadores[1], jugadores[0], fixedDt);
+    jugadores.forEach(j => j.update(fixedDt));
+    actualizarProyectiles(fixedDt);
+    actualizarExplosiones(fixedDt);
+    if (shakeT > 0) { shakeT -= fixedDt; if (shakeT <= 0) shakeAmp = 0; }
+    accumulator -= fixedDt;
+  }
+  if (juegoIniciado && jugadores.length > 0) {
+    const leftmost = Math.min(...jugadores.map(j => j.x));
+    const rightmost = Math.max(...jugadores.map(j => j.x));
+    const focusX = (leftmost + rightmost) / 2;
+    const targetCamX = focusX - LOGICAL_WIDTH / 2;
+    camX = Math.max(0, Math.min(targetCamX, WORLD_WIDTH - LOGICAL_WIDTH));
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(-camX, 0);
+  drawStage();
+  drawWindBurst();
+  if (!juegoIniciado) {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 80px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      cuentaAtras > 0 ? cuentaAtras : cuentaAtras === 0 ? '¡LUCHA!' : '',
+      LOGICAL_WIDTH / 2,
+      LOGICAL_HEIGHT / 2
+    );
+  } else {
+    jugadores.forEach(j => j.draw(ctx));
+    dibujarProyectiles();
+    dibujarExplosiones();
+  }
+  ctx.restore();
+  if (juegoIniciado) {
+    const yHUD = LOGICAL_HEIGHT - 32;
+    const padding = 30;
+    for (let idx = 0; idx < jugadores.length; idx++) {
+      const j = jugadores[idx];
+      const xHUD = (idx === 0) ? padding : LOGICAL_WIDTH - padding - 180;
+      ctx.drawImage(j.icono, xHUD, yHUD - 34, 36, 36);
+      ctx.font = 'bold 22px system-ui, sans-serif';
+      const colorPct = j.daño < 50 ? '#00e676' : j.daño < 100 ? '#ffeb3b' : '#ff3d00';
+      ctx.fillStyle = colorPct;
+      ctx.fillText(`${Math.round(j.daño)}%`, xHUD + 42, yHUD - 10);
+      const startX = xHUD + 95;
+      for (let i = 0; i < 5; i++) {
+        const x = startX + i * 17;
+        const y = yHUD - 20;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        if (i < j.vidas) {
+          ctx.fillStyle = j.colorHUD;
+          ctx.fill();
+        } else {
+          ctx.strokeStyle = j.colorHUD;
+          ctx.stroke();
+        }
+      }
+      if (j.assets.cfg.ataqueFrenetico) {
+        const barY = yHUD - 50;
+        const barW = 100;
+        const barH = 8;
+        const xBar = xHUD + 45;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(xBar, barY, barW, barH);
+        if (j.frenzyActive) {
+          ctx.fillStyle = '#00e676';
+          ctx.fillRect(xBar, barY, barW * (j.frenzyTimer / j.frenzyMax), barH);
+        } else {
+          ctx.fillStyle = '#f44336';
+          ctx.fillRect(xBar, barY, barW, barH);
+        }
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText(j.frenzyActive ? 'FRENESÍ' : 'USADO', xBar, barY - 2);
+      }
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   ACTUALIZAR Y DIBUJAR PROYECTILES
+   ========================================================= */
+function actualizarProyectiles(dt) {
+  for (let i = proyectiles.length - 1; i >= 0; i--) {
+    const p = proyectiles[i];
+    p.x += p.vx * dt;
+    p.vida -= dt;
+    let hit = false;
+    for (const jugador of jugadores) {
+      if (jugador === p.owner) continue;
+      const feetY = jugador.y;
+      const centerY = feetY - jugador.renderH * 0.35;
+      const halfW = jugador.renderW / 2;
+      const halfH = jugador.renderH * 0.6;
+      const left = jugador.x - halfW;
+      const right = jugador.x + halfW;
+      const top = centerY - halfH;
+      const bottom = centerY + halfH;
+      const projLeft = p.x - p.radio;
+      const projRight = p.x + p.radio;
+      const projTop = p.y - p.radio;
+      const projBottom = p.y + p.radio;
+      if (
+        projRight > left &&
+        projLeft < right &&
+        projBottom > top &&
+        projTop < bottom
+      ) {
+        explotarProyectil(p);
+        proyectiles.splice(i, 1);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+    for (const bloque of [...terreno.filter(Boolean), ...plataformas]) {
+      if (!bloque) continue;
+      if (
+        p.x + p.radio > bloque.x &&
+        p.x - p.radio < bloque.x + bloque.w &&
+        p.y + p.radio > bloque.y &&
+        p.y - p.radio < bloque.y + bloque.h
+      ) {
+        explotarProyectil(p);
+        proyectiles.splice(i, 1);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+    if (p.vida <= 0) {
+      explotarProyectil(p);
+      proyectiles.splice(i, 1);
+    }
+  }
+}
+function explotarProyectil(proyectil) {
+  if (!proyectil || typeof proyectil.x !== 'number' || typeof proyectil.y !== 'number') {
+    console.error("❌ Proyectil inválido:", proyectil);
+    return;
+  }
+  if (proyectil.owner?.explosionImg) {
+    const img = proyectil.owner.explosionImg;
+    const cols = proyectil.owner.explosionCols || 1;
+    const rows = proyectil.owner.explosionRows || 1;
+    const frameW = img.width / cols;
+    const frameH = img.height / rows;
+    explosiones.push({
+      x: proyectil.x,
+      y: proyectil.y,
+      img, cols, rows, frameW, frameH,
+      frameIndex: 0,
+      timer: 0,
+      vida: 0.3
+    });
+  }
+  shakeT = 0.2;
+  shakeAmp = 12;
+  playSFX('explosion');
+  const radioExplosion = proyectil.explosionRadio || 180;
+  let afectados = 0;
+  for (const jugador of jugadores) {
+    if (!jugador || !jugador.x || !jugador.y) continue;
+    if (jugador.iFrames > 0) continue;
+    const dx = jugador.x - proyectil.x;
+    const dy = jugador.y - proyectil.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (isNaN(dist) || dist > radioExplosion) continue;
+    afectados++;
+    const factor = 2 - (dist / radioExplosion);
+    const daño = 5 * factor;
+    jugador.daño += daño;
+    jugador.vx += (dx / dist) * 400 * factor;
+    jugador.vy = -Math.abs(dy / dist) * 400 * factor * 0.7;
+    jugador.stun = 0.15 * factor;
+    jugador.iFrames = ATTACK.iFrames;
+    jugador.frameIndex = 0;
+    jugador.animTimer = 0;
+    playSFX('hit');
+  }
+  if (afectados === 0) {
+    console.log("🔇 Nadie recibió daño");
+  } else {
+    console.log(`✅ Daño a ${afectados} jugador(es)`);
+  }
+}
+function dibujarProyectiles() {
+  for (const p of proyectiles) {
+    if (!p.img) continue;
+    ctx.save();
+    if (shakeT > 0) ctx.translate((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp);
+    ctx.translate(p.x, p.y);
+    if (p.vx < 0) ctx.scale(-1, 1);
+    const size = p.radio * 2;
+    ctx.drawImage(p.img, -size/2, -size/2, size, size);
+    ctx.restore();
+  }
+}
+function actualizarExplosiones(dt) {
+  for (let i = explosiones.length - 1; i >= 0; i--) {
+    const e = explosiones[i];
+    e.timer += dt;
+    e.vida -= dt;
+    const fps = 15;
+    if (e.timer >= 1 / fps) {
+      e.timer -= 1 / fps;
+      e.frameIndex++;
+    }
+    if (e.vida <= 0 || e.frameIndex >= e.cols * e.rows) {
+      explosiones.splice(i, 1);
+    }
+  }
+}
+function dibujarExplosiones() {
+  for (const e of explosiones) {
+    ctx.save();
+    if (shakeT > 0) ctx.translate((Math.random() - 0.5) * shakeAmp, (Math.random() - 0.5) * shakeAmp);
+    const sx = (e.frameIndex % e.cols) * e.frameW;
+    const sy = Math.floor(e.frameIndex / e.cols) * e.frameH;
+    ctx.drawImage(e.img, sx, sy, e.frameW, e.frameH, e.x - e.frameW/2, e.y - e.frameH/2, e.frameW, e.frameH);
+    ctx.restore();
+  }
+}
+
+/* =========================================================
+   Flujo de pantallas
+   ========================================================= */
+const selectTitle = document.getElementById('selectTitle');
+let seleccionados = [];
+let turno = 0;
+let play1P, play2P;
+async function inicializarBotones() {
+  play1P = document.getElementById('play1P');
+  play2P = document.getElementById('play2P');
+  if (!play1P || !play2P) {
+    setTimeout(inicializarBotones, 100);
+    return;
+  }
+  await preloadAudio();
+  await cargarTodasLasMusics();
+  play1P.disabled = false;
+  play2P.disabled = false;
+  // Botones de inicio
+  play1P.addEventListener('click', () => {
+    playSFX('click');
+    modoCPU = true;
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('characterSelect').style.display = 'flex';
+    selectTitle.textContent = "Selecciona tu personaje";
+  });
+  play2P.addEventListener('click', () => {
+    playSFX('click');
+    modoCPU = false;
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('characterSelect').style.display = 'flex';
+    selectTitle.textContent = "Selecciona tu personaje (Primero J1 y luego J2)";
+  });
+  // Iniciar música del menú
+  if (musicaMenu && audioEnabled) {
+    musicaMenu.play().catch(err => console.warn("🔇 No se pudo reproducir música del menú:", err));
+    musicaReproduciendose = true;
+  }
+}
+document.addEventListener('DOMContentLoaded', inicializarBotones);
+
+function getStats(charKey) {
+  switch(charKey) {
+    case 'bombardinoCrocodino':
+      return { walkSpeed: 320, baseKB: 600, damage: 15 };
+    case 'tralalero':
+      return { walkSpeed: 210, baseKB: 800, damage: 20 };
+    case 'tungtung':
+      return { walkSpeed: 380, baseKB: 550, damage: 16 };
+    case 'blueberinni':
+      return { walkSpeed: 370, baseKB: 510, damage: 13 };
+    case 'capibara':
+      return { walkSpeed: 500, baseKB: 400, damage: 8 };
+    case 'boneca':
+      return { walkSpeed: 560, baseKB: 560, damage: 14 };
+    default:
+      return { walkSpeed: 420, baseKB: 520, damage: 10 };
+  }
+}
+
+function mostrarSeleccionEscenario() {
+  document.getElementById('difficultySelect').style.display = 'none';
+  document.getElementById('cpuSelect').style.display = 'none';
+  document.getElementById('biomeSelect').style.display = 'block';
+  selectTitle.textContent = "Elige el escenario";
+  const biomeGrid = document.getElementById('biomeGrid');
+  biomeGrid.innerHTML = '';
+  Object.keys(BIOMES).forEach(key => {
+    const bioma = BIOMES[key];
+    const b = document.createElement('button');
+    b.className = 'charBtn';
+    b.dataset.biome = key;
+    b.style.position = 'relative';
+    b.style.overflow = 'hidden';
+    b.style.backgroundImage = `url('${bioma.fondo}')`;
+    b.style.backgroundSize = 'cover';
+    b.style.backgroundPosition = 'center';
+    b.style.cursor = 'pointer';
+    b.style.border = '4px solid #555';
+    b.style.width = '200px';
+    b.style.height = '180px';
+    b.style.display = 'flex';
+    b.style.flexDirection = 'column';
+    b.style.justifyContent = 'flex-end';
+    b.style.alignItems = 'center';
+    b.style.color = 'white';
+    b.style.fontWeight = 'bold';
+    b.style.textShadow = '0 2px 6px rgba(0,0,0,0.9)';
+    const label = document.createElement('div');
+    label.style.padding = '10px 12px';
+    label.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    label.style.width = '100%';
+    label.style.textAlign = 'center';
+    label.textContent = {
+      forest: '🌳 Bosque',
+      volcano: '🌋 Volcán',
+      snow: '❄️ Nieve',
+      playa: '🏖️ Playa',
+      cementerio: '⚰️ Cementerio',
+      plaza: '🏙️ Plaza'
+    }[key];
+    b.appendChild(label);
+    b.addEventListener('mouseenter', () => {
+      b.style.transform = 'scale(1.05)';
+      b.style.borderColor = 'gold';
+    });
+    b.addEventListener('mouseleave', () => {
+      b.style.transform = 'scale(1)';
+      b.style.borderColor = '#555';
+    });
+    b.addEventListener('click', async () => {
+      playSFX('click');
+      biomaActual = key;
+      // Detener música del menú
+      if (musicaMenu && musicaReproduciendose) {
+        musicaMenu.pause();
+        musicaMenu.currentTime = 0;
+        musicaReproduciendose = false;
+      }
+      // Iniciar música del escenario
+      const musicaEscenario = pistasMusica[biomaActual];
+      if (musicaEscenario && audioEnabled) {
+        musicaEscenario.currentTime = 0;
+        musicaEscenario.play().catch(err => console.warn("🔇 No se pudo reproducir música del escenario:", err));
+        musicaCombate = musicaEscenario;
+        musicaReproduciendose = true;
+      }
+      const bioma = BIOMES[biomaActual];
+      try {
+        const [sueloImg, fondoImg] = await Promise.all([
+          loadImage(bioma.sueloTex, bioma.panelColor),
+          loadImage(bioma.fondo, '#87ceeb')
+        ]);
+        texSuelo = sueloImg;
+        fondoEscenario = fondoImg;
+        document.body.style.setProperty('--panel', bioma.panelColor);
+        document.body.style.setProperty('--panel2', bioma.platformTop);
+        generarTerreno();
+        const START_X = WORLD_WIDTH / 2;
+        if (modoCPU) {
+          const [assets1, assets2] = await Promise.all([
+            preloadPersonaje(PERSONAJES[seleccionados[0]]),
+            preloadPersonaje(PERSONAJES[seleccionados[1]])
+          ]);
+          const stats1 = getStats(seleccionados[0]);
+          const stats2 = getStats(seleccionados[1]);
+          const cpuStats = { ...stats2 };
+          if (dificultadCPU === 'easy') {
+            cpuStats.walkSpeed *= 0.7;
+            cpuStats.baseKB *= 0.8;
+            cpuStats.damage = Math.max(5, cpuStats.damage - 3);
+          } else if (dificultadCPU === 'hard') {
+            cpuStats.walkSpeed *= 1.2;
+            cpuStats.baseKB *= 1.3;
+            cpuStats.damage = (cpuStats.damage || 10) + 5;
+          }
+          jugadores = [
+            crearJugador(START_X - 300, { izq: 'a', der: 'd', salto: 'w', ataque: 's' }, '#f44336', assets1, false, seleccionados[0]).updateStats(stats1),
+            crearJugador(START_X + 300, { izq: 'ArrowLeft', der: 'ArrowRight', salto: 'ArrowUp', ataque: 'ArrowDown' }, '#2196f3', assets2, true, seleccionados[1]).updateStats(cpuStats)
+          ];
+          jugadores[1].iaDificultad = dificultadCPU;
+        } else {
+          const [assets1, assets2] = await Promise.all([
+            preloadPersonaje(PERSONAJES[seleccionados[0]]),
+            preloadPersonaje(PERSONAJES[seleccionados[1]])
+          ]);
+          const stats1 = getStats(seleccionados[0]);
+          const stats2 = getStats(seleccionados[1]);
+          jugadores = [
+            crearJugador(START_X - 300, { izq: 'a', der: 'd', salto: 'w', ataque: 's' }, '#f44336', assets1, false, seleccionados[0]).updateStats(stats1),
+            crearJugador(START_X + 300, { izq: 'ArrowLeft', der: 'ArrowRight', salto: 'ArrowUp', ataque: 'ArrowDown' }, '#2196f3', assets2, false, seleccionados[1]).updateStats(stats2)
+          ];
+        }
+        document.getElementById('characterSelect').style.display = 'none';
+        // Mostrar botón de pausa
+        document.getElementById('btnPausa').style.display = 'block';
+        lastTs = 0;
+        requestAnimationFrame(loop);
+      } catch (err) {
+        console.error("Error al cargar bioma", err);
+        alert("Error cargando el escenario.");
+      }
+    });
+    biomeGrid.appendChild(b);
+  });
+}
+
+document.querySelectorAll('.charBtn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    playSFX('click');
+    const key = btn.dataset.char;
+    if (seleccionados.includes(key)) return;
+    btn.classList.add('selected');
+    seleccionados.push(key);
+    turno++;
+    if (modoCPU && turno === 1) {
+      document.getElementById('charGrid').style.display = 'none';
+      document.getElementById('cpuSelect').style.display = 'block';
+      selectTitle.textContent = "Elige al oponente (CPU)";
+      const cpuGrid = document.getElementById('cpuGrid');
+      cpuGrid.innerHTML = '';
+      const disponibles = Object.keys(PERSONAJES).filter(k => k !== key);
+      disponibles.forEach(k => {
+        const b = document.createElement('button');
+        b.className = 'charBtn';
+        b.dataset.char = k;
+        b.innerHTML = `
+          <img src="${PERSONAJES[k].icono}" alt="${k}" onerror="this.style.opacity=.4">
+          <span>${k === 'capuchinno' ? 'Capuchino Asasino' :
+                 k === 'ballerina' ? 'Capuchina Ballerina' :
+                 k === 'bombardinoCrocodino' ? 'Bombardino Crocodino' :
+                 k === 'tralalero' ? 'Tralalero' :
+                 k === 'blueberinni' ? 'Blueberinni Octopussini' :
+                 k === 'tungtung' ? 'TungTung Sahur' :
+                 k === 'boneca' ? 'Boneca Ambalabu' :
+                 k.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+        `;
+        b.addEventListener('click', () => {
+          playSFX('click');
+          if (seleccionados.includes(k)) return;
+          seleccionados.push(k);
+          b.classList.add('selected');
+          cpuGrid.querySelectorAll('.charBtn').forEach(btn => btn.disabled = true);
+          setTimeout(() => {
+            document.getElementById('cpuSelect').style.display = 'none';
+            document.getElementById('difficultySelect').style.display = 'block';
+            selectTitle.textContent = "Elige la dificultad de la CPU";
+          }, 300);
+        });
+        cpuGrid.appendChild(b);
+      });
+      return;
+    }
+    if (!modoCPU && turno === 2) {
+      document.getElementById('charGrid').style.display = 'none';
+      mostrarSeleccionEscenario();
+    }
+  });
+});
+
+document.querySelectorAll('#difficultySelect .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    playSFX('click');
+    dificultadCPU = btn.dataset.diff;
+    mostrarSeleccionEscenario();
+  });
+});
+
+function resetGame() {
+  cuentaAtras = 3;
+  tiempoCuentaAtras = 1;
+  juegoIniciado = false;
+  juegoPausado = false;
+  jugadores = [];
+  proyectiles.length = 0;
+  explosiones.length = 0;
+  windBurst = null;
+  shakeT = 0;
+  shakeAmp = 0;
+  seleccionados = [];
+  turno = 0;
+  dificultadCPU = 'normal';
+  biomaActual = 'forest';
+  lastTs = 0;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Detener música de combate
+  if (musicaCombate && musicaReproduciendose) {
+    musicaCombate.pause();
+    musicaCombate.currentTime = 0;
+    musicaReproduciendose = false;
+  }
+  // Volver a música del menú
+  if (musicaMenu && audioEnabled) {
+    musicaMenu.currentTime = 0;
+    musicaMenu.play().catch(err => console.warn("🔇 No se pudo reproducir música del menú:", err));
+    musicaReproduciendose = true;
+  }
+  document.getElementById('endScreen').style.display = 'none';
+  document.getElementById('characterSelect').style.display = 'flex';
+  document.getElementById('charGrid').style.display = 'flex';
+  document.getElementById('cpuSelect').style.display = 'none';
+  document.getElementById('difficultySelect').style.display = 'none';
+  document.getElementById('biomeSelect').style.display = 'none';
+  selectTitle.textContent = "Selecciona tu personaje (Primero J1 y luego J2)";
+  document.querySelectorAll('.charBtn').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  for (let key in teclas) delete teclas[key];
+  // Ocultar botones
+  document.getElementById('btnPausa').style.display = 'none';
+  document.getElementById('pauseMenu').style.display = 'none';
+}
+
+document.querySelector('#endScreen .btn').addEventListener('click', resetGame);
+
+// --- MENÚ DE PAUSA ---
+const pauseMenu = document.getElementById('pauseMenu');
+const btnResume = document.getElementById('btnResume');
+const btnMenu = document.getElementById('btnMenu');
+const btnToggleMode = document.getElementById('btnToggleMode');
+const volumeSlider = document.getElementById('volumeSlider');
+const volText = document.getElementById('volText');
+let masterVolume = 1.0;
+
+// Botón de pausa: muestra el menú
+document.getElementById('btnPausa').addEventListener('click', () => {
+  if (juegoIniciado) {
+    juegoPausado = true;
+    pauseMenu.style.display = 'flex';
+    document.getElementById('btnPausa').style.display = 'none';
+  }
+});
+
+// Botón: Reanudar
+btnResume.addEventListener('click', () => {
+  juegoPausado = false;
+  pauseMenu.style.display = 'none';
+  document.getElementById('btnPausa').style.display = 'block';
+});
+
+// Botón: Cambiar modo (1P / 2P)
+btnToggleMode.addEventListener('click', () => {
+  playSFX('click');
+  modoCPU = !modoCPU;
+  btnToggleMode.textContent = modoCPU ? '🎮 Modo: 1 Jugador' : '🎮 Modo: 2 Jugadores';
+});
+
+// Botón: Volver al menú
+btnMenu.addEventListener('click', () => {
+  // Detener música de combate
+  if (musicaCombate && musicaReproduciendose) {
+    musicaCombate.pause();
+    musicaCombate.currentTime = 0;
+    musicaReproduciendose = false;
+  }
+  // Volver a música de menú
+  if (musicaMenu && audioEnabled) {
+    musicaMenu.currentTime = 0;
+    musicaMenu.play().catch(() => {});
+    musicaReproduciendose = true;
+  }
+  // Resetear juego
+  resetGame();
+  pauseMenu.style.display = 'none';
+  document.getElementById('btnPausa').style.display = 'none';
+});
+
+// Slider de volumen
+volumeSlider.addEventListener('input', () => {
+  const value = parseInt(volumeSlider.value);
+  masterVolume = value / 100;
+  volText.textContent = `${value}%`;
+  // Aplicar volumen a todos los sonidos
+  Object.values(sfx).forEach(audio => {
+    if (audio instanceof Audio) audio.volume = 0.5 * masterVolume;
+  });
+  if (musicaMenu) musicaMenu.volume = 0.4 * masterVolume;
+  if (musicaCombate) musicaCombate.volume = 0.4 * masterVolume;
+  playSFX('click');
+});
+
+// Inicializar volumen
+volText.textContent = '100%';
+
+// --- DESACTIVAR TECLA P ---
+// La tecla P ya no hace nada
+
+document.body.style.touchAction = 'none';
+['touchstart', 'touchmove', 'touchend'].forEach(e => {
+  canvas.addEventListener(e, ev => ev.preventDefault(), { passive: false });
+});
+
+console.log("✅ Todo cargado. Listo para jugar.");
+</script>
+</body>
+</html>
